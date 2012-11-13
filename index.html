@@ -1,0 +1,119 @@
+<html>
+	<head>
+		<title>HTML5 Video</title>
+	</head>
+	<body>
+		<h1>HTML5 Video</h1>
+		<div id="video-wrapper">
+			<video width="960" height="540" controls="controls" id="video">
+				<source src="3930_2_A-BRITISH-SUMMER.webmhd.webm" type='video/webm; codecs="vp8, vorbis"' />
+				<source src="assets/3930_2_A-BRITISH-SUMMER.mp4" type='video/mp4; codecs="avc1.42E01E, mp4a.40.2"' />
+			</video>
+			<div id="content">
+
+			</div>
+		</div>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+        <script>window.jQuery || document.write('<script src="js/jquery-1.8.2.min.js"><\/script>')</script>
+        <script>
+        	(function($) {
+        		var VideoCue = function(opts) {
+        			this.init(opts);
+        		};
+        		VideoCue.prototype = {
+        			getCurrentContent: function () {
+        				var self = this;
+        			},
+        			getCurrentTime: function () {
+        				// Return the current video time.
+        				return this.video.currentTime;
+        			},
+        			setListener: function () {
+        				var self = this;
+        				/**
+        				 * - Create an event listenter.
+        				 * - We can then use this to serve up the different content.
+        				 */
+        				this.video.addEventListener( 'timeupdate', function() {
+
+        				} );
+        			},
+        			returnAttrs: function (attrs) {
+        				/**
+        				 * - Count the total amount of attributes..
+        				 * - Set an incrementer.
+        				 * - Create an object to store the attributes details.
+        				 */
+        				var count = attrs.length,
+							i     = count,
+							obj   = {};
+						// Loop through the attributes.
+        				while( i ) { i -= 1;
+        					/**
+        					 * - If one of the attributes is the 'timeStamp'.
+        					 * - Convert its value into usable data.
+        					 * - Else carry on as usual.
+        					 */
+        					if( attrs[i].name == 'timeStamp' ) {
+        						var time = attrs[i].value.split( ':' );
+        						obj[attrs[i].name] = parseFloat( time[1] );
+        					}
+        					else {
+        						obj[attrs[i].name] = attrs[i].value;	
+        					}
+        				}
+        				return obj;
+        			},
+        			parseFeed: function (feed) {
+        				/**
+        				 * - Convert the feed into a jQuery object so we can quickly traverse it.
+        				 * - Count the length of the feed.
+        				 * - Set an incrementer.
+        				 */
+				 		var pointers = $(feed).find('cuepoint'),
+							count    = pointers.length,
+							i        = count;
+						// Loop through the feed and build up an object from all the attributes.
+						while( i ) { i -= 1;
+							this.feed[i] = this.returnAttrs( pointers[i].attributes );
+						}
+						console.log(this.feed);
+        			},
+        			fetch: function () {
+        				var self = this;
+        				/**
+        				 * - Run a jQuery AJAX request
+        				 * - Return the data as XML
+        				 */
+        				$.ajax({
+						    type: "GET",
+							url: self.url,
+							dataType: "xml",
+							success: function(xml) {
+								/**
+								 * - Pass the feed for parsing.
+								 * - Set the event listener so we can tap into what the current playing time is
+								 */
+								self.parseFeed(xml);
+								self.setListener();
+							}
+						});
+        			},
+        			init: function (opts) {
+        				// Set function properties.
+						this.url   = opts.url;
+						this.video = document.getElementById(opts.video);
+						this.feed  = {};
+						// Run function methods.
+        				this.fetch();
+        			}
+        		};
+        		var cues = new VideoCue({
+        			url: 'http://www.adjustyourset.tv/interview/cuepoints.xml',
+        			video: 'video',
+        			content: 'content'
+        		});
+        	})(jQuery);
+        </script>
+	</body>
+</html>
