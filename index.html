@@ -6,7 +6,7 @@
 		<h1>HTML5 Video</h1>
 		<div id="video-wrapper">
 			<video width="960" height="540" controls="controls" id="video">
-				<source src="3930_2_A-BRITISH-SUMMER.webmhd.webm" type='video/webm; codecs="vp8, vorbis"' />
+				<source src="assets/3930_2_A-BRITISH-SUMMER.webmhd.webm" type='video/webm; codecs="vp8, vorbis"' />
 				<source src="assets/3930_2_A-BRITISH-SUMMER.mp4" type='video/mp4; codecs="avc1.42E01E, mp4a.40.2"' />
 			</video>
 			<div id="content">
@@ -16,104 +16,144 @@
 		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
         <script>window.jQuery || document.write('<script src="js/jquery-1.8.2.min.js"><\/script>')</script>
         <script>
-        	(function($) {
-        		var VideoCue = function(opts) {
-        			this.init(opts);
-        		};
-        		VideoCue.prototype = {
-        			getCurrentContent: function () {
-        				var self = this;
-        			},
-        			getCurrentTime: function () {
-        				// Return the current video time.
-        				return this.video.currentTime;
-        			},
-        			setListener: function () {
-        				var self = this;
-        				/**
-        				 * - Create an event listenter.
-        				 * - We can then use this to serve up the different content.
-        				 */
-        				this.video.addEventListener( 'timeupdate', function() {
-
-        				} );
-        			},
-        			returnAttrs: function (attrs) {
-        				/**
-        				 * - Count the total amount of attributes..
-        				 * - Set an incrementer.
-        				 * - Create an object to store the attributes details.
-        				 */
-        				var count = attrs.length,
-							i     = count,
-							obj   = {};
-						// Loop through the attributes.
-        				while( i ) { i -= 1;
-        					/**
-        					 * - If one of the attributes is the 'timeStamp'.
-        					 * - Convert its value into usable data.
-        					 * - Else carry on as usual.
-        					 */
-        					if( attrs[i].name == 'timeStamp' ) {
-        						var time = attrs[i].value.split( ':' );
-        						obj[attrs[i].name] = parseFloat( time[1] );
-        					}
-        					else {
-        						obj[attrs[i].name] = attrs[i].value;	
-        					}
-        				}
-        				return obj;
-        			},
-        			parseFeed: function (feed) {
-        				/**
-        				 * - Convert the feed into a jQuery object so we can quickly traverse it.
-        				 * - Count the length of the feed.
-        				 * - Set an incrementer.
-        				 */
-				 		var pointers = $(feed).find('cuepoint'),
-							count    = pointers.length,
-							i        = count;
-						// Loop through the feed and build up an object from all the attributes.
-						while( i ) { i -= 1;
-							this.feed[i] = this.returnAttrs( pointers[i].attributes );
-						}
-						console.log(this.feed);
-        			},
-        			fetch: function () {
-        				var self = this;
-        				/**
-        				 * - Run a jQuery AJAX request
-        				 * - Return the data as XML
-        				 */
-        				$.ajax({
-						    type: "GET",
-							url: self.url,
-							dataType: "xml",
-							success: function(xml) {
-								/**
-								 * - Pass the feed for parsing.
-								 * - Set the event listener so we can tap into what the current playing time is
-								 */
-								self.parseFeed(xml);
-								self.setListener();
-							}
-						});
-        			},
-        			init: function (opts) {
-        				// Set function properties.
-						this.url   = opts.url;
-						this.video = document.getElementById(opts.video);
-						this.feed  = {};
-						// Run function methods.
-        				this.fetch();
-        			}
-        		};
-        		var cues = new VideoCue({
-        			url: 'http://www.adjustyourset.tv/interview/cuepoints.xml',
-        			video: 'video',
-        			content: 'content'
-        		});
-        	})(jQuery);
+           (function($) {
+                var VideoCue = function(opts) {
+                    this.init(opts);
+                };
+                VideoCue.prototype = {
+                    showCuepoint: function (cuepoint) {
+                        /*
+                         * - Hide all the <.cuepoint> DOM elements.
+                         * - Show the <#cuepoint>.
+                         */
+                        $('.cuepoint').hide();
+                        $('#' + cuepoint).show();
+                    },
+                    getCurrentTime: function () {
+                        return this.video.currentTime;
+                    },
+                    setListener: function (key, value) {
+                        var self = this;
+                        $(this.video).on('timeupdate', function () {
+                            /*
+                             * - If the video current time is equal to or greater than the passed key...
+                             * - AND it is less than the passed key plus a little.
+                             * - Toggle the visibility of the cuepoints via the showCuepoint method.
+                             */
+                            if (
+                                self.getCurrentTime() >= key &&
+                                self.getCurrentTime() <= ( key + 0.25 ) )
+                            {
+                                self.showCuepoint(value);
+                            }
+                        });
+                    },
+                    buildCuepoint: function (attrs, id) {
+                        /*
+                         * - Count the amount of attributes that have been passed.
+                         * - Set the decrementing value to count
+                         * - Create an #id out of the id passed.
+                         * - Create a <div> to contain the XML info.
+                         */
+                        var count = attrs.length,
+                            i     = count,
+                            ident = 'cue-' + id,
+                            obj   = $('<div>', {
+                                        'id': ident,
+                                        'class': 'cuepoint'
+                                    }).hide();
+                        /*
+                         * - Loop through the attributes.
+                         * - If the attribute name equal...
+                         * - ... timeStamp, break that value down into usable data and pass it onto the setListener method.
+                         * - ... thumblink, create an image.
+                         * - else just bung it into a <p>.
+                         * - if the attr value is anything other than false append it to obj.
+                         */
+                        while( i ) { i -= 1;
+                            var attr = false;
+                            if( attrs[i].name === 'timeStamp' ) {
+                                var timeSplitter = attrs[i].value.split( ':' ),
+                                    time = parseFloat( timeSplitter[1] );
+                                this.setListener( time, ident );
+                            }
+                            else if( attrs[i].name === 'thumbLink' ) {
+                                var attr = $('<img>', {
+                                    'src': attrs[i].value,
+                                    'alt': attrs[i].name
+                                });
+                            }
+                            else {
+                                var attr = $('<p>', {
+                                    'class': attrs[i].name,
+                                    'text': attrs[i].value
+                                });
+                            }
+                            if(attr) {
+                                attr.appendTo(obj);
+                            }
+                        }
+                        /*
+                         * - Append the newly created markup to the content.
+                         */
+                        obj.appendTo($(this.content));
+                    },
+                    parseFeed: function (feed) {
+                        /*
+                         * - Create a jQuery object out of the XML feed.
+                         * - Find the relavant data, and count how much there is.
+                         */
+                        var pointers = $(feed).find( 'cuepoint' ),
+                            count    = pointers.length,
+                            i        = count;
+                        /*
+                         * - Loop through the data
+                         * - And build markup out of it.
+                         */
+                        while( i ) { i -= 1;
+                            this.buildCuepoint( pointers[i].attributes, i );
+                        }
+                    },
+                    fetch: function () {
+                        var self = this;
+                        /*
+                         * - Run the jQuery AJAX method
+                         * - Make sure we GET an XML feed based on the URL.
+                         */
+                        $.ajax({
+                            type: "GET",
+                            url: self.url,
+                            dataType: "xml",
+                            success: function(xml) {
+                                /*
+                                 * - If all went well send it on for parsing.
+                                 */
+                                self.parseFeed(xml);
+                            }
+                        });
+                    },
+                    init: function (opts) {
+                        /*
+                         * - Set up some function properties to use in the function.
+                         * - Make sure we have references to the url, video and content parameters that have been passed.
+                         * - Also create a feed object to push data into.
+                         */
+                        this.url     = opts.url;
+                        this.video   = document.getElementById(opts.video);
+                        this.content = document.getElementById(opts.content);
+                        /*
+                         * - Now we are ready to run the function methods.
+                         * - Go and fetch the XML.
+                         */
+                        this.fetch();
+                    }
+                };
+                var cues = new VideoCue({
+                    url: 'http://www.adjustyourset.tv/interview/cuepoints.xml',
+                    video: 'video',
+                    content: 'content'
+                });
+            })(jQuery);
         </script>
 	</body>
 </html>
